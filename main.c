@@ -5,6 +5,8 @@
 #include <stdio.h>
 #include <dirent.h>
 #include <string.h>
+#include <stdlib.h>
+#include <ctype.h>
 
 struct Document {
     char DocumentName[50];
@@ -12,7 +14,7 @@ struct Document {
 }typedef Document;
 
 struct Order {
-    char Word[100];
+    struct Term *Term;
     struct Order *NextWord;
 }typedef Order;
 
@@ -20,27 +22,46 @@ struct Term {
     char Word[100];
     Document *Document;
     Order *FirstOrder, *SecondOrder, *ThirdOrder;
+    struct Term *NextTerm;
 }typedef Term;
 
-void getFilesRecursively(char *path);
-void printFile(char *filePath);
+void getFilesRecursively(char *path, Term **root);
+void getCategory(char *path, char *category);
+void printFile(char *filePath, Term **root);
+void addWordIntoMasterLinkedList(Term **root, char* word);
+void printMasterLinkedList(Term *root);
 
 int main() {
+    Term *root = NULL;
+
     // Directory path of categories
-    char path[200];
+    char path[500];
 
     // Input path from user
     printf("Enter the path of categories: ");
     scanf("%s", path);
 
-    getFilesRecursively(path);
+    getFilesRecursively(path, &root);
+    //char category[50];
+    //getCategory(path, category);
+    //printf("%s", category);
+
+    printMasterLinkedList(root);
+ /*   addWordIntoMasterLinkedList(&root, "beril");
+    addWordIntoMasterLinkedList(&root, "mehmet");
+    addWordIntoMasterLinkedList(&root, "ahmet");
+    addWordIntoMasterLinkedList(&root, "ceyda");
+    addWordIntoMasterLinkedList(&root, "zeynep");
+
+    printMasterLinkedList(root);*/
 
     return 0;
 }
 
-void getFilesRecursively(char *basePath)
+void getFilesRecursively(char *basePath, Term **root)
 {
     char path[1000];
+    char category[100];
     struct dirent *dp;
     DIR *dir = opendir(basePath);
 
@@ -69,19 +90,26 @@ void getFilesRecursively(char *basePath)
                 extension[i] = path[length-dec];
             }
 
+            //Is that folder or txt file?
             if(strncmp(extension, ".txt", 4) == 0){
-                printFile(path);
+                printFile(path, root);
+            } else {
+               // addCategory(path);
+               //Kategoriler depolayacağın bir linked list implement et.
             }
 
-            getFilesRecursively(path);
+            getFilesRecursively(path, root);
         }
     }
     closedir(dir);
 }
 
-void printFile(char *filePath){
+void printFile(char *filePath, Term **root){
     FILE *in_file;
-    char word[50];
+    char word[50] = "";
+    char category[50] = "";
+    char path[200] = "";
+    strcpy(path, filePath);
 
     in_file = fopen(filePath, "r");
 
@@ -91,8 +119,79 @@ void printFile(char *filePath){
     {
         while (fscanf(in_file, "%s", word) != EOF)
         {
-            printf("%s\n", word);
+            getCategory(path, category);
+            printf("Kelime: %s, Kategori: %s\n", word, category);
+            addWordIntoMasterLinkedList(root, word);
         }
         fclose(in_file);
+    }
+}
+
+void getCategory(char *path, char *category){
+    //Strings of array for the words in path.
+    char words[30][100];
+
+    int wordCounter = 0;
+    char delim[] = "\\";
+
+    char *ptr = strtok(path, delim);
+
+    while (ptr != NULL)
+    {
+        strncpy(words[wordCounter], ptr, strlen(ptr));
+        //printf("'%s'\n", ptr);
+        ptr = strtok(NULL, delim);
+        wordCounter++;
+    }
+
+    strncpy(category, words[wordCounter-2], strlen(words[wordCounter-2]));
+}
+
+void addWordIntoMasterLinkedList(Term **root, char* word){
+    //Check if MLL is empty or not.
+    Term *iter = *root;
+    if(*root == NULL){
+        (*root) = (Term*)malloc(sizeof(Term));
+        strncpy((*root)->Word, word, strlen(word));
+        (*root)->NextTerm = NULL;
+        return;
+    }
+    //If is not empty, add the word to end of the list
+    else
+    {
+        //Create temp term to add.
+        Term *temp = (Term*)malloc(sizeof(Term));
+        temp->NextTerm = NULL;
+        strncpy(temp->Word, word, strlen(word));
+
+        //Add into list sorted.
+        //If the word less than root, change the root.
+        if(strcmp(word, (*root)->Word) < 0){
+            temp->NextTerm = *root;
+            *root = temp;
+            return;
+        }//If the word between word, find its place.
+        else
+        {
+            while(iter->NextTerm != NULL && strcmp(word, iter->NextTerm->Word) < 0){
+                iter = iter->NextTerm;
+            }
+            //Add to end of the list.
+            if(iter->NextTerm == NULL){
+                //sona ekle
+                iter->NextTerm = temp;
+            }else{
+                temp->NextTerm = iter->NextTerm;
+                iter->NextTerm = temp;
+            }
+        }
+    }
+}
+
+void printMasterLinkedList(Term *root){
+    Term *iter = root;
+    while(iter->NextTerm != NULL){
+        printf("%s\n", iter->Word);
+        iter = iter->NextTerm;
     }
 }
