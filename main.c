@@ -37,7 +37,6 @@ int main() {
     setlocale(LC_ALL, "Turkish");
     Term *root = NULL;
 
-
     // Directory path of categories
     char path[500];
 
@@ -48,9 +47,6 @@ int main() {
     getFilesRecursively(path, &root);
     printMasterLinkedList(root);
 
-/*
-   master linked liste e eklemede problem yok ancak, daha önce olup olmadığını kontrol edemiyorum.
-*/
     return 0;
 }
 
@@ -171,13 +167,15 @@ void addWordIntoMasterLinkedList(Term **root, char *word){
 }
 
 int checkIfWordAlreadyExist(Term *root, char *word){
-    Term *iter = *root;
+    Term *iter = root;
     while(iter->NextTerm != NULL){
+        //If the word already exist, return 1.
         if(strcmp(iter->Word, word) == 0){
             return 1;
         }
         iter = iter->NextTerm;
     }
+    //If the word does not exist in the list, return 0.
     return 0;
 }
 
