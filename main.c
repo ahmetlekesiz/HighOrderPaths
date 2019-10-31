@@ -6,11 +6,11 @@
 #include <dirent.h>
 #include <string.h>
 #include <stdlib.h>
-#include <ctype.h>
-#include<locale.h>
+#include <locale.h>
 
-struct Document {
+struct Document  {
     char DocumentName[50];
+    char CategoryName[50];
     struct Document *NextDocument;
 }typedef Document;
 
@@ -22,16 +22,19 @@ struct Order {
 struct Term {
     char Word[100];
     Document *Document;
+    int counter;
     Order *FirstOrder, *SecondOrder, *ThirdOrder;
     struct Term *NextTerm;
 }typedef Term;
 
 void getFilesRecursively(char *path, Term **root);
-void getCategory(char *path, char *category);
+void getCategoryandDocument(char *path, char *category, char *documentName);
 void printFile(char *filePath, Term **root);
-void addWordIntoMasterLinkedList(Term **root, char* word);
-int checkIfWordAlreadyExist(Term *root, char *word);
+void addWordIntoMasterLinkedList(Term **root, char* word, char *documentName, char *categoryName);
+int checkIfWordAlreadyExist(Term *root, char *word, char *documentName, char *categoryName);
 void printMasterLinkedList(Term *root);
+void printDocumentList(Document *document);
+void addDocument(Document* node, char *document, char *category);
 
 int main() {
     setlocale(LC_ALL, "Turkish");
@@ -46,7 +49,8 @@ int main() {
 
     getFilesRecursively(path, &root);
     printMasterLinkedList(root);
-
+    printf("*****");
+    printMasterLinkedList(root);
     return 0;
 }
 
@@ -98,6 +102,7 @@ void printFile(char *filePath, Term **root){
     char word[50] = "";
     char category[50] = "";
     char path[200] = "";
+    char documentName[50] = "";
     strcpy(path, filePath);
 
     in_file = fopen(filePath, "r");
@@ -108,23 +113,27 @@ void printFile(char *filePath, Term **root){
     {
         while (fscanf(in_file, "%s", word) != EOF)
         {
-            getCategory(path, category);
-            printf("Kelime: %s, Kategori: %s\n", word, category);
-            addWordIntoMasterLinkedList(root, word);
+            getCategoryandDocument(path, category, documentName);
+            printf("Kelime: %s, Kategori: %s, Document: %s\n", word, category, documentName);
+            addWordIntoMasterLinkedList(root, word, documentName, category);
             memset(word, 0, sizeof(word));
+            memset(documentName, 0, sizeof(documentName));
         }
         fclose(in_file);
     }
 }
 
-void getCategory(char *path, char *category){
+void getCategoryandDocument(char *path, char *category, char *document){
     //Strings of array for the words in path.
     char words[30][100];
+    memset(words, 0, sizeof(words));
+    char FilePath[200] = "";
+    strcpy(FilePath, path);
 
     int wordCounter = 0;
     char delim[] = "\\";
 
-    char *ptr = strtok(path, delim);
+    char *ptr = strtok(FilePath, delim);
 
     while (ptr != NULL)
     {
@@ -133,22 +142,34 @@ void getCategory(char *path, char *category){
         wordCounter++;
     }
 
-    strncpy(category, words[wordCounter-2], strlen(words[wordCounter-2]));
+    strcpy(category, words[wordCounter-2]);
+    strcpy(document, words[wordCounter-1]);
 }
 
-void addWordIntoMasterLinkedList(Term **root, char *word){
+void addWordIntoMasterLinkedList(Term **root, char *word, char *documentName, char *categoryName){
+    Term *temp = (Term*)malloc(sizeof(Term));
+    strcpy(temp->Word, word);
+    temp->counter = 0;
+    temp->Document = NULL;
     //If MLL is empty.
     if(*root == NULL){
         (*root) = (Term*)malloc(sizeof(Term));
         strcpy((*root)->Word, word);
+        (*root)->Document = malloc(sizeof(Document));
+        strcpy((*root)->Document->DocumentName, documentName);
+        strcpy((*root)->Document->CategoryName, categoryName);
+        (*root)->Document->NextDocument =NULL;
         (*root)->NextTerm = NULL;
         return;
-    }else if(checkIfWordAlreadyExist(*root, word) == 0){
+    }else if(checkIfWordAlreadyExist(*root, word, documentName, categoryName) == 0){
+        //Add document
+        temp->Document = malloc(sizeof(Document));
+        strcpy(temp->Document->DocumentName, documentName);
+        strcpy(temp->Document->CategoryName, categoryName);
+        temp->Document->NextDocument = NULL;
         //ilk elemandan kücük durumu
         if(strcmp(word, (*root)->Word) < 0){
             //change the root
-            Term *temp = (Term*)malloc(sizeof(Term));
-            strcpy(temp->Word, word);
             temp->NextTerm = (*root);
             *root = temp;
             return;
@@ -157,43 +178,25 @@ void addWordIntoMasterLinkedList(Term **root, char *word){
         while(iter->NextTerm != NULL && strcmp(word, iter->NextTerm->Word) > 0){
             iter = iter->NextTerm;
         }
-        Term *temp = (Term*)malloc(sizeof(Term));
-        strcpy(temp->Word, word);
         temp->NextTerm = iter->NextTerm;
         iter->NextTerm = temp;
         return;
     }
-
 }
 
-int checkIfWordAlreadyExist(Term *root, char *word){
+int checkIfWordAlreadyExist(Term *root, char *word, char *documentName, char *categoryName){
     Term *iter = root;
     while(iter->NextTerm != NULL){
         //If the word already exist, return 1.
         if(strcmp(iter->Word, word) == 0){
+            //If the word already exist in the master linked list, add document into list
+            addDocument(iter->Document, documentName, categoryName);
             return 1;
         }
         iter = iter->NextTerm;
     }
     //If the word does not exist in the list, return 0.
     return 0;
-}
-
-void addDocument(Term *term, char *documentName){
-    Document* temp = (Document*)malloc(sizeof(Document));
-    strcpy(temp->DocumentName, documentName);
-    temp->NextDocument = NULL;
-
-    if(term->Document == NULL){
-        term->Document = temp;
-    }else{
-        Document* iter;
-        iter = term->Document;
-        while(iter->NextDocument != NULL){
-            iter = iter->NextDocument;
-        }
-        iter->NextDocument = temp;
-    }
 }
 
 void printMasterLinkedList(Term *root){
@@ -204,3 +207,24 @@ void printMasterLinkedList(Term *root){
     }
 }
 
+void addDocument(Document* node, char* document, char* category){
+    while(node->NextDocument != NULL){
+        node = node->NextDocument;
+    }
+    Document *temp = malloc(sizeof(Document));
+    temp->NextDocument = NULL;
+    strcpy(temp->DocumentName, document);
+    strcpy(temp->CategoryName, category);
+
+    node->NextDocument = temp;
+}
+
+void printDocumentList(Document *document){
+    Document *iter;
+    iter = document;
+    printf("%s", iter->DocumentName);
+    while(iter->NextDocument != NULL){
+        iter = iter->NextDocument;
+        printf("%s", iter->DocumentName);
+    }
+}
