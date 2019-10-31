@@ -179,6 +179,23 @@ int checkIfWordAlreadyExist(Term *root, char *word){
     return 0;
 }
 
+void addDocument(Term *term, char *documentName){
+    Document* temp = (Document*)malloc(sizeof(Document));
+    strcpy(temp->DocumentName, documentName);
+    temp->NextDocument = NULL;
+
+    if(term->Document == NULL){
+        term->Document = temp;
+    }else{
+        Document* iter;
+        iter = term->Document;
+        while(iter->NextDocument != NULL){
+            iter = iter->NextDocument;
+        }
+        iter->NextDocument = temp;
+    }
+}
+
 void printMasterLinkedList(Term *root){
     Term *iter = root;
     while(iter->NextTerm != NULL){
@@ -187,9 +204,3 @@ void printMasterLinkedList(Term *root){
     }
 }
 
-void makeArrayEmpty(char *word){
-    size_t length = strlen(word);
-    for (int i = 0; i < length; ++i) {
-        word[i] = "";
-    }
-};
