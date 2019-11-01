@@ -15,7 +15,6 @@ struct Document  {
 }typedef Document;
 
 struct Order {
-    struct Term *Term;
     struct Order *NextWord;
 }typedef Order;
 
@@ -35,6 +34,7 @@ int checkIfWordAlreadyExist(Term *root, char *word, char *documentName, char *ca
 void printMasterLinkedList(Term *root);
 void printDocumentList(Document *document);
 void addDocument(Document* node, char *document, char *category);
+void firstOccurrence(Term *root);
 
 int main() {
     setlocale(LC_ALL, "Turkish");
@@ -48,8 +48,8 @@ int main() {
     scanf("%s", path);
 
     getFilesRecursively(path, &root);
-    printMasterLinkedList(root);
-    printf("*****");
+  //  printf("*****");
+    firstOccurrence(root);
     printMasterLinkedList(root);
     return 0;
 }
@@ -151,6 +151,9 @@ void addWordIntoMasterLinkedList(Term **root, char *word, char *documentName, ch
     strcpy(temp->Word, word);
     temp->counter = 0;
     temp->Document = NULL;
+    temp->FirstOrder = NULL;
+    temp->SecondOrder = NULL;
+    temp->ThirdOrder = NULL;
     //If MLL is empty.
     if(*root == NULL){
         (*root) = (Term*)malloc(sizeof(Term));
@@ -160,6 +163,9 @@ void addWordIntoMasterLinkedList(Term **root, char *word, char *documentName, ch
         strcpy((*root)->Document->CategoryName, categoryName);
         (*root)->Document->NextDocument =NULL;
         (*root)->NextTerm = NULL;
+        (*root)->FirstOrder = NULL;
+        (*root)->SecondOrder = NULL;
+        (*root)->ThirdOrder = NULL;
         return;
     }else if(checkIfWordAlreadyExist(*root, word, documentName, categoryName) == 0){
         //Add document
@@ -217,6 +223,30 @@ void addDocument(Document* node, char* document, char* category){
     strcpy(temp->CategoryName, category);
 
     node->NextDocument = temp;
+}
+void firstOccurrence(Term *root){
+    //master linkled list'i tek tek gez, her bir node'u sağındaki node larla karşılaştır ve first occurent listini doldur.
+    Term *temp = root;
+    while(temp->NextTerm != NULL){
+        while(temp->Document != NULL){
+            while(temp->NextTerm->Document != NULL){
+                if(strcmp(temp->Document->DocumentName, temp->NextTerm->Document->DocumentName) == 0
+                && strcmp(temp->Document->CategoryName, temp->NextTerm->Document->CategoryName) == 0){
+                    if(temp->FirstOrder == NULL){
+                        temp->FirstOrder = temp->NextTerm;
+                    }else{
+                        temp->FirstOrder->NextWord = temp->NextTerm;
+                    }
+                    printf("bilim mi\n");
+                    printf("%s", temp->NextTerm->Word);
+                }
+                temp->NextTerm->Document = temp->NextTerm->Document->NextDocument;
+            }
+            temp->Document = temp->Document->NextDocument;
+        }
+        temp = temp->NextTerm;
+    }
+    printf("asdasd");
 }
 
 void printDocumentList(Document *document){
