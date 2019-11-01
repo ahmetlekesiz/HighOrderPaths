@@ -21,7 +21,7 @@ struct Order {
 struct Term {
     char Word[100];
     Document *Document;
-    int counter;
+    int DocumentCounter;
     Order *FirstOrder, *SecondOrder, *ThirdOrder;
     struct Term *NextTerm;
 }typedef Term;
@@ -41,11 +41,11 @@ int main() {
     Term *root = NULL;
 
     // Directory path of categories
-    char path[500];
+    char path[500] = "c:\\myfolder";
 
     // Input path from user
-    printf("Enter the path of categories: ");
-    scanf("%s", path);
+   // printf("Enter the path of categories: ");
+  //  scanf("%s", path);
 
     getFilesRecursively(path, &root);
   //  printf("*****");
@@ -149,7 +149,6 @@ void getCategoryandDocument(char *path, char *category, char *document){
 void addWordIntoMasterLinkedList(Term **root, char *word, char *documentName, char *categoryName){
     Term *temp = (Term*)malloc(sizeof(Term));
     strcpy(temp->Word, word);
-    temp->counter = 0;
     temp->Document = NULL;
     temp->FirstOrder = NULL;
     temp->SecondOrder = NULL;
@@ -161,6 +160,7 @@ void addWordIntoMasterLinkedList(Term **root, char *word, char *documentName, ch
         (*root)->Document = malloc(sizeof(Document));
         strcpy((*root)->Document->DocumentName, documentName);
         strcpy((*root)->Document->CategoryName, categoryName);
+        (*root)->DocumentCounter = 1;
         (*root)->Document->NextDocument =NULL;
         (*root)->NextTerm = NULL;
         (*root)->FirstOrder = NULL;
@@ -170,6 +170,7 @@ void addWordIntoMasterLinkedList(Term **root, char *word, char *documentName, ch
     }else if(checkIfWordAlreadyExist(*root, word, documentName, categoryName) == 0){
         //Add document
         temp->Document = malloc(sizeof(Document));
+        temp->DocumentCounter = 1;
         strcpy(temp->Document->DocumentName, documentName);
         strcpy(temp->Document->CategoryName, categoryName);
         temp->Document->NextDocument = NULL;
@@ -197,6 +198,7 @@ int checkIfWordAlreadyExist(Term *root, char *word, char *documentName, char *ca
         if(strcmp(iter->Word, word) == 0){
             //If the word already exist in the master linked list, add document into list
             addDocument(iter->Document, documentName, categoryName);
+            iter->DocumentCounter = iter->DocumentCounter + 1;
             return 1;
         }
         iter = iter->NextTerm;
@@ -227,20 +229,29 @@ void addDocument(Document* node, char* document, char* category){
 void firstOccurrence(Term *root){
     //master linkled list'i tek tek gez, her bir node'u sağındaki node larla karşılaştır ve first occurent listini doldur.
     Term *temp = root;
+    int compareCounter = 0;
     while(temp->NextTerm != NULL){
         while(temp->Document != NULL){
             while(temp->NextTerm->Document != NULL){
                 if(strcmp(temp->Document->DocumentName, temp->NextTerm->Document->DocumentName) == 0
-                && strcmp(temp->Document->CategoryName, temp->NextTerm->Document->CategoryName) == 0){
+                && strcmp(temp->Document->CategoryName, temp->NextTerm->Document->CategoryName) == 0)
+                {
                     if(temp->FirstOrder == NULL){
                         temp->FirstOrder = temp->NextTerm;
+                        temp->FirstOrder->NextWord = NULL;
                     }else{
+                        while(temp->FirstOrder != NULL){
+                            temp->FirstOrder = temp->FirstOrder->NextWord;
+                        }
                         temp->FirstOrder->NextWord = temp->NextTerm;
                     }
-                    printf("bilim mi\n");
-                    printf("%s", temp->NextTerm->Word);
                 }
+                compareCounter++;
                 temp->NextTerm->Document = temp->NextTerm->Document->NextDocument;
+                if(temp->NextTerm->DocumentCounter == compareCounter){
+                    temp->NextTerm = temp->NextTerm->NextTerm;
+                    compareCounter = 0;
+                }
             }
             temp->Document = temp->Document->NextDocument;
         }
