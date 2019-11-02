@@ -36,14 +36,16 @@ void printMasterLinkedList(Term *root);
 void printDocumentList(Document *document);
 void addDocument(Document* node, char *document, char *category);
 void firstOccurrence(Term *root);
-void addFirstOccurence(Term *baseTerm, Term *additionTerm);
+void addFirstOccurrence(Term *baseTerm, Term *additionTerm);
+void printFirstOccurrence(Term *root);
+void addSecondOccurrence(Term *root);
 
 int main() {
     setlocale(LC_ALL, "Turkish");
     Term *root = NULL;
 
     // Directory path of categories
-    char path[500] = "c:\\myfolder";
+    char path[500] = "C:\\Users\\ahmet\\Desktop\\2019-2020\\DataStructures\\Project1\\DataSet\\Deneme";
 
     // Input path from user
    // printf("Enter the path of categories: ");
@@ -52,7 +54,9 @@ int main() {
     getFilesRecursively(path, &root);
   //  printf("*****");
     firstOccurrence(root);
-    printMasterLinkedList(root);
+   // printMasterLinkedList(root);
+    printFirstOccurrence(root);
+    addSecondOccurrence(root);
     return 0;
 }
 
@@ -195,7 +199,7 @@ void addWordIntoMasterLinkedList(Term **root, char *word, char *documentName, ch
 
 int checkIfWordAlreadyExist(Term *root, char *word, char *documentName, char *categoryName){
     Term *iter = root;
-    while(iter->NextTerm != NULL){
+    while(iter != NULL){
         //If the word already exist, return 1.
         if(strcmp(iter->Word, word) == 0){
             //If the word already exist in the master linked list, add document into list
@@ -244,7 +248,7 @@ void firstOccurrence(Term *root){
                         temp->FirstOrder->term = nextTemp;
                         temp->FirstOrder->nextTerm = NULL;
                     }else{
-                        addFirstOccurence(temp, nextTemp);
+                        addFirstOccurrence(temp, nextTemp);
                     }
                 }
                 if(nextTemp->Document->NextDocument == NULL){
@@ -252,13 +256,13 @@ void firstOccurrence(Term *root){
                 }else{
                     nextTemp->Document = nextTemp->Document->NextDocument;
                 }
+                nextTemp = nextTemp->NextTerm;
             }
             temp = temp->NextTerm;
-            nextTemp = temp->NextTerm;
         }
     }
 
-void addFirstOccurence(Term *baseTerm, Term *additionTerm){
+void addFirstOccurrence(Term *baseTerm, Term *additionTerm){
     Occurrence *iter;
     iter = baseTerm->FirstOrder;
 
@@ -278,4 +282,49 @@ void printDocumentList(Document *document){
         iter = iter->NextDocument;
         printf("%s", iter->DocumentName);
     }
+}
+
+void printFirstOccurrence(Term *root){
+    printf("1st-order term co-occurrence: ");
+    Occurrence *iterOccurrence = root->FirstOrder;
+    Term *iterRoot = root;
+    while(iterRoot != NULL){
+        while(iterOccurrence != NULL){
+            printf("{%s, %s}, ", iterRoot->Word, iterOccurrence->term->Word);
+            iterOccurrence = iterOccurrence->nextTerm;
+        }
+        iterOccurrence = iterRoot->FirstOrder;
+        iterRoot = iterRoot->NextTerm;
+    }
+}
+
+void addSecondOccurrence(Term *root){
+    Term * iterRoot = root;
+    Occurrence * iterOccurrence = iterRoot->FirstOrder->term->FirstOrder;
+    Occurrence * secondOccurrenceIter;
+
+    while(iterRoot != NULL){
+        while(iterOccurrence != NULL){
+            if(iterRoot->SecondOrder == NULL){
+                iterRoot->SecondOrder = (Occurrence*)malloc(sizeof(Occurrence));
+                iterRoot->SecondOrder->term = iterOccurrence->term;
+                iterRoot->SecondOrder->nextTerm = NULL;
+                secondOccurrenceIter = iterRoot->SecondOrder;
+            }else{
+                while(secondOccurrenceIter->nextTerm != NULL){
+                    secondOccurrenceIter = secondOccurrenceIter->nextTerm;
+                }
+                secondOccurrenceIter->nextTerm = (Occurrence*)malloc(sizeof(Occurrence));
+                secondOccurrenceIter->nextTerm->term = iterOccurrence->term;
+                secondOccurrenceIter->nextTerm->nextTerm = NULL;
+            }
+            iterOccurrence = iterOccurrence->nextTerm;
+        }
+        if(iterRoot->FirstOrder != NULL && iterRoot->FirstOrder->term->FirstOrder != NULL){
+            iterOccurrence = iterRoot->FirstOrder->term->FirstOrder;
+        }
+        iterRoot = iterRoot->NextTerm;
+    }
+
+
 }
