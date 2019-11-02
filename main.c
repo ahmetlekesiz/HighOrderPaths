@@ -8,21 +8,22 @@
 #include <stdlib.h>
 #include <locale.h>
 
-struct Document  {
+struct Document {
     char DocumentName[50];
     char CategoryName[50];
     struct Document *NextDocument;
 }typedef Document;
 
-struct Order {
-    struct Order *NextWord;
-}typedef Order;
+struct Occurrence {
+    struct Term* term;
+    struct Occurrence *nextTerm;
+}typedef Occurrence;
 
 struct Term {
     char Word[100];
-    Document *Document;
     int DocumentCounter;
-    Order *FirstOrder, *SecondOrder, *ThirdOrder;
+    Occurrence *FirstOrder, *SecondOrder, *ThirdOrder;
+    Document *Document;
     struct Term *NextTerm;
 }typedef Term;
 
@@ -35,6 +36,7 @@ void printMasterLinkedList(Term *root);
 void printDocumentList(Document *document);
 void addDocument(Document* node, char *document, char *category);
 void firstOccurrence(Term *root);
+void addFirstOccurence(Term *baseTerm, Term *additionTerm);
 
 int main() {
     setlocale(LC_ALL, "Turkish");
@@ -229,35 +231,43 @@ void addDocument(Document* node, char* document, char* category){
 void firstOccurrence(Term *root){
     //master linkled list'i tek tek gez, her bir node'u sağındaki node larla karşılaştır ve first occurent listini doldur.
     Term *temp = root;
-    int compareCounter = 0;
-    while(temp->NextTerm != NULL){
-        while(temp->Document != NULL){
-            while(temp->NextTerm->Document != NULL){
-                if(strcmp(temp->Document->DocumentName, temp->NextTerm->Document->DocumentName) == 0
-                && strcmp(temp->Document->CategoryName, temp->NextTerm->Document->CategoryName) == 0)
+    Term *nextTemp;
+    nextTemp = temp->NextTerm;
+    Occurrence *tempOrder;
+        while(nextTemp != NULL && temp->Document != NULL){
+            while(nextTemp != NULL && nextTemp->Document != NULL){
+                if(strcmp(temp->Document->DocumentName, nextTemp->Document->DocumentName) == 0
+                && strcmp(temp->Document->CategoryName, nextTemp->Document->CategoryName) == 0)
                 {
                     if(temp->FirstOrder == NULL){
-                        temp->FirstOrder = temp->NextTerm;
-                        temp->FirstOrder->NextWord = NULL;
+                        temp->FirstOrder = (Occurrence*)malloc(sizeof(Occurrence));
+                        temp->FirstOrder->term = nextTemp;
+                        temp->FirstOrder->nextTerm = NULL;
                     }else{
-                        while(temp->FirstOrder != NULL){
-                            temp->FirstOrder = temp->FirstOrder->NextWord;
-                        }
-                        temp->FirstOrder->NextWord = temp->NextTerm;
+                        addFirstOccurence(temp, nextTemp);
                     }
                 }
-                compareCounter++;
-                temp->NextTerm->Document = temp->NextTerm->Document->NextDocument;
-                if(temp->NextTerm->DocumentCounter == compareCounter){
-                    temp->NextTerm = temp->NextTerm->NextTerm;
-                    compareCounter = 0;
+                if(nextTemp->Document->NextDocument == NULL){
+                    nextTemp = nextTemp->NextTerm;
+                }else{
+                    nextTemp->Document = nextTemp->Document->NextDocument;
                 }
             }
-            temp->Document = temp->Document->NextDocument;
+            temp = temp->NextTerm;
+            nextTemp = temp->NextTerm;
         }
-        temp = temp->NextTerm;
     }
-    printf("asdasd");
+
+void addFirstOccurence(Term *baseTerm, Term *additionTerm){
+    Occurrence *iter;
+    iter = baseTerm->FirstOrder;
+
+    while(iter->nextTerm != NULL)
+        iter = iter->nextTerm;
+
+    iter->nextTerm = malloc(sizeof(Occurrence));
+    iter->nextTerm->term = additionTerm;
+    iter->nextTerm->nextTerm = NULL;
 }
 
 void printDocumentList(Document *document){
