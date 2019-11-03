@@ -38,7 +38,10 @@ void addDocument(Document* node, char *document, char *category);
 void firstOccurrence(Term *root);
 void addFirstOccurrence(Term *baseTerm, Term *additionTerm);
 void printFirstOccurrence(Term *root);
-void addSecondOccurrence(Term *root);
+int doesExistInFirstOccurrence(Term *baseTerm, Term *additionalTerm);
+void secondOccurrence(Term *root);
+void addSecondOccurrence(Term *baseTerm, Term *additionTerm);
+
 
 int main() {
     setlocale(LC_ALL, "Turkish");
@@ -46,6 +49,7 @@ int main() {
 
     // Directory path of categories
     char path[500] = "C:\\Users\\ahmet\\Desktop\\2019-2020\\DataStructures\\Project1\\DataSet\\Deneme";
+    //char path[500] = "C:\\myfolder";
 
     // Input path from user
    // printf("Enter the path of categories: ");
@@ -56,7 +60,7 @@ int main() {
     firstOccurrence(root);
    // printMasterLinkedList(root);
     printFirstOccurrence(root);
-    addSecondOccurrence(root);
+    secondOccurrence(root);
     return 0;
 }
 
@@ -233,45 +237,71 @@ void addDocument(Document* node, char* document, char* category){
     node->NextDocument = temp;
 }
 void firstOccurrence(Term *root){
-    //master linkled list'i tek tek gez, her bir node'u sağındaki node larla karşılaştır ve first occurent listini doldur.
-    Term *temp = root;
-    Term *nextTemp;
-    nextTemp = temp->NextTerm;
-    Occurrence *tempOrder;
-        while(nextTemp != NULL && temp->Document != NULL){
-            while(nextTemp != NULL && nextTemp->Document != NULL){
-                if(strcmp(temp->Document->DocumentName, nextTemp->Document->DocumentName) == 0
-                && strcmp(temp->Document->CategoryName, nextTemp->Document->CategoryName) == 0)
+    Term *mainIter = root;
+    Document *mainDocumentIter = root->Document;
+    Term *nextIter = root->NextTerm;
+    Document *nextDocumentIter = nextIter->Document;
+
+    while(mainIter != NULL){
+        while(mainDocumentIter != NULL){
+            while(nextIter != NULL){
+                if(strcmp(mainDocumentIter->DocumentName, nextDocumentIter->DocumentName) == 0
+                   && strcmp(mainDocumentIter->CategoryName, nextDocumentIter->CategoryName) == 0)
                 {
-                    if(temp->FirstOrder == NULL){
-                        temp->FirstOrder = (Occurrence*)malloc(sizeof(Occurrence));
-                        temp->FirstOrder->term = nextTemp;
-                        temp->FirstOrder->nextTerm = NULL;
-                    }else{
-                        addFirstOccurrence(temp, nextTemp);
+                    addFirstOccurrence(mainIter,nextIter);
+                    nextIter = nextIter->NextTerm;
+                    if(nextIter != NULL) {
+                        nextDocumentIter = nextIter->Document;
                     }
                 }
-                if(nextTemp->Document->NextDocument == NULL){
-                    nextTemp = nextTemp->NextTerm;
-                }else{
-                    nextTemp->Document = nextTemp->Document->NextDocument;
+                else if(nextDocumentIter->NextDocument != NULL)
+                {
+                    nextDocumentIter = nextDocumentIter->NextDocument;
+                }else if(nextDocumentIter->NextDocument == NULL)
+                {
+                    nextIter = nextIter->NextTerm;
+                    if(nextIter != NULL){
+                        nextDocumentIter = nextIter->Document;
+                    }
                 }
-                nextTemp = nextTemp->NextTerm;
             }
-            temp = temp->NextTerm;
+            mainDocumentIter = mainDocumentIter->NextDocument;
+            nextIter = mainIter->NextTerm;
+            if(nextIter != NULL){
+                nextDocumentIter = nextIter->Document;
+            }
+        }
+        mainIter = mainIter->NextTerm;
+        if(mainIter != NULL){
+            mainDocumentIter = mainIter->Document;
+            nextIter = mainIter->NextTerm;
+            if(nextIter!=NULL){
+                nextDocumentIter = nextIter->Document;
+            }
         }
     }
 
+
+
+}
+
 void addFirstOccurrence(Term *baseTerm, Term *additionTerm){
-    Occurrence *iter;
-    iter = baseTerm->FirstOrder;
+    if(baseTerm->FirstOrder == NULL){
+        baseTerm->FirstOrder = (Occurrence*)malloc(sizeof(Occurrence));
+        baseTerm->FirstOrder->term = baseTerm->NextTerm;
+        baseTerm->FirstOrder->nextTerm = NULL;
+    }else{
+        Occurrence *iter;
+        iter = baseTerm->FirstOrder;
 
-    while(iter->nextTerm != NULL)
-        iter = iter->nextTerm;
+        while(iter->nextTerm != NULL){
+            iter = iter->nextTerm;
+        }
 
-    iter->nextTerm = malloc(sizeof(Occurrence));
-    iter->nextTerm->term = additionTerm;
-    iter->nextTerm->nextTerm = NULL;
+        iter->nextTerm = malloc(sizeof(Occurrence));
+        iter->nextTerm->term = additionTerm;
+        iter->nextTerm->nextTerm = NULL;
+    }
 }
 
 void printDocumentList(Document *document){
@@ -298,33 +328,57 @@ void printFirstOccurrence(Term *root){
     }
 }
 
-void addSecondOccurrence(Term *root){
-    Term * iterRoot = root;
-    Occurrence * iterOccurrence = iterRoot->FirstOrder->term->FirstOrder;
-    Occurrence * secondOccurrenceIter;
+void secondOccurrence(Term *root){
+    Term *mainIter = root;
+    Occurrence *mainFirstOccurrenceIter = mainIter->FirstOrder;
+    Term *nextIter = mainFirstOccurrenceIter->term;
+    Occurrence *nextFirstOccurrenceIter = nextIter->FirstOrder;
 
-    while(iterRoot != NULL){
-        while(iterOccurrence != NULL){
-            if(iterRoot->SecondOrder == NULL){
-                iterRoot->SecondOrder = (Occurrence*)malloc(sizeof(Occurrence));
-                iterRoot->SecondOrder->term = iterOccurrence->term;
-                iterRoot->SecondOrder->nextTerm = NULL;
-                secondOccurrenceIter = iterRoot->SecondOrder;
-            }else{
-                while(secondOccurrenceIter->nextTerm != NULL){
-                    secondOccurrenceIter = secondOccurrenceIter->nextTerm;
+    while(mainIter != NULL){
+        mainFirstOccurrenceIter = mainIter->FirstOrder;
+        while(mainFirstOccurrenceIter != NULL){
+            nextIter = mainFirstOccurrenceIter->term;
+            nextFirstOccurrenceIter = nextIter->FirstOrder;
+            while(nextFirstOccurrenceIter != NULL){
+                if(doesExistInFirstOccurrence(mainIter, nextFirstOccurrenceIter->term) == 0){
+                    addSecondOccurrence(mainIter, nextFirstOccurrenceIter->term);
                 }
-                secondOccurrenceIter->nextTerm = (Occurrence*)malloc(sizeof(Occurrence));
-                secondOccurrenceIter->nextTerm->term = iterOccurrence->term;
-                secondOccurrenceIter->nextTerm->nextTerm = NULL;
+                nextFirstOccurrenceIter = nextFirstOccurrenceIter->nextTerm;
             }
-            iterOccurrence = iterOccurrence->nextTerm;
+            mainFirstOccurrenceIter = mainFirstOccurrenceIter->nextTerm;
         }
-        if(iterRoot->FirstOrder != NULL && iterRoot->FirstOrder->term->FirstOrder != NULL){
-            iterOccurrence = iterRoot->FirstOrder->term->FirstOrder;
-        }
-        iterRoot = iterRoot->NextTerm;
+        mainIter = mainIter->NextTerm;
     }
 
 
+}
+
+int doesExistInFirstOccurrence(Term *baseTerm, Term *additionalTerm){
+    Occurrence * iterBase = baseTerm->FirstOrder;
+    while(iterBase != NULL){
+        if(strcmp(iterBase->term->Word, additionalTerm->Word) == 0){
+            //return 1 if it does exist.
+            return 1;
+        }else{
+            iterBase = iterBase->nextTerm;
+        }
+    }
+    //return 0 if it does not exist.
+    return 0;
+}
+
+void addSecondOccurrence(Term *baseTerm, Term *additionTerm){
+    if(baseTerm->SecondOrder == NULL){
+        baseTerm->SecondOrder = (Occurrence*)malloc(sizeof(Occurrence));
+        baseTerm->SecondOrder->term = additionTerm;
+        baseTerm->SecondOrder->nextTerm = NULL;
+    }else{
+        Occurrence *iter = baseTerm->SecondOrder;
+        while(iter->nextTerm != NULL){
+            iter = iter->nextTerm;
+        }
+        iter->nextTerm = (Occurrence*)malloc(sizeof(Occurrence));
+        iter->nextTerm->term = additionTerm;
+        iter->nextTerm->nextTerm = NULL;
+    }
 }
