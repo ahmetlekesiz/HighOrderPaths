@@ -324,23 +324,6 @@ void printDocumentList(Document *document){
     }
 }
 
-void printFirstOccurrence(Term *root){
-    printf("1st-order term co-occurrence: ");
-    Term *iterRoot = root;
-    Occurrence *iterOccurrence = iterRoot->FirstOrder;
-    while(iterRoot != NULL){
-        iterOccurrence = iterRoot->FirstOrder;
-        if(strcmp(iterRoot->Word, "ay") == 0){
-            printf("asd");
-        }
-        while(iterOccurrence != NULL){
-            printf("{%s, %s}, ", iterRoot->Word, iterOccurrence->term->Word);
-            iterOccurrence = iterOccurrence->nextTerm;
-        }
-        iterRoot = iterRoot->NextTerm;
-    }
-}
-
 void printOccurrence(Term *root, int occurrence){
     if(occurrence == 1){
         printf("1st-order term co-occurrence: ");
@@ -369,35 +352,6 @@ void printOccurrence(Term *root, int occurrence){
         iterRoot = iterRoot->NextTerm;
     }
 }
-
-void printSecondOccurrence(Term *root){
-    printf("2nd-order term co-occurrence: ");
-    Occurrence *iterOccurrence = root->SecondOrder;
-    Term *iterRoot = root;
-    while(iterRoot != NULL){
-        while(iterOccurrence != NULL){
-            printf("{%s, %s}, ", iterRoot->Word, iterOccurrence->term->Word);
-            iterOccurrence = iterOccurrence->nextTerm;
-        }
-        iterOccurrence = iterRoot->SecondOrder;
-        iterRoot = iterRoot->NextTerm;
-    }
-}
-//PRINTLER TEK METHODA INDIRGENEBİLİR.
-void printThirdOccurrence(Term *root){
-    printf("3rd-order term co-occurrence: ");
-    Occurrence *iterOccurrence = root->ThirdOrder;
-    Term *iterRoot = root;
-    while(iterRoot != NULL){
-        while(iterOccurrence != NULL){
-            printf("{%s, %s}, ", iterRoot->Word, iterOccurrence->term->Word);
-            iterOccurrence = iterOccurrence->nextTerm;
-        }
-        iterOccurrence = iterRoot->ThirdOrder;
-        iterRoot = iterRoot->NextTerm;
-    }
-}
-
 
 void secondOccurrence(Term *root){
     Term *mainIter = root;
