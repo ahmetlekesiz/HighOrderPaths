@@ -38,10 +38,15 @@ void addDocument(Document* node, char *document, char *category);
 void firstOccurrence(Term *root);
 void addFirstOccurrence(Term *baseTerm, Term *additionTerm);
 void printFirstOccurrence(Term *root);
+void printSecondOccurrence(Term *root);
+void printThirdOccurrence(Term *root);
 int doesExistInFirstOccurrence(Term *baseTerm, Term *additionalTerm);
 void secondOccurrence(Term *root);
 void addSecondOccurrence(Term *baseTerm, Term *additionTerm);
-
+void thirdOccurrence(Term *root);
+int doesExistInSecondOccurrence();
+void addThirdOccurrence(Term *baseTerm, Term *additionTerm);
+void printOccurrence(Term *root, int occurrence);
 
 int main() {
     setlocale(LC_ALL, "Turkish");
@@ -49,8 +54,8 @@ int main() {
 
     // Directory path of categories
     char path[500] = "C:\\Users\\ahmet\\Desktop\\2019-2020\\DataStructures\\Project1\\DataSet\\Deneme";
-    //char path[500] = "C:\\myfolder";
-
+//    char path[500] = "C:\\myfolder";
+//    char path[500] = "C:\\Users\\ahmet\\Desktop\\2019-2020\\DataStructures\\Project1\\DataSet\\smalldataset2";
     // Input path from user
    // printf("Enter the path of categories: ");
   //  scanf("%s", path);
@@ -59,8 +64,15 @@ int main() {
   //  printf("*****");
     firstOccurrence(root);
    // printMasterLinkedList(root);
-    printFirstOccurrence(root);
     secondOccurrence(root);
+    thirdOccurrence(root);
+    printOccurrence(root, 1);
+    printf("\n");
+    printOccurrence(root, 2);
+    printf("\n");
+    printOccurrence(root, 3);
+
+
     return 0;
 }
 
@@ -236,6 +248,7 @@ void addDocument(Document* node, char* document, char* category){
 
     node->NextDocument = temp;
 }
+
 void firstOccurrence(Term *root){
     Term *mainIter = root;
     Document *mainDocumentIter = root->Document;
@@ -280,15 +293,12 @@ void firstOccurrence(Term *root){
             }
         }
     }
-
-
-
 }
 
 void addFirstOccurrence(Term *baseTerm, Term *additionTerm){
     if(baseTerm->FirstOrder == NULL){
         baseTerm->FirstOrder = (Occurrence*)malloc(sizeof(Occurrence));
-        baseTerm->FirstOrder->term = baseTerm->NextTerm;
+        baseTerm->FirstOrder->term = additionTerm;
         baseTerm->FirstOrder->nextTerm = NULL;
     }else{
         Occurrence *iter;
@@ -316,17 +326,78 @@ void printDocumentList(Document *document){
 
 void printFirstOccurrence(Term *root){
     printf("1st-order term co-occurrence: ");
-    Occurrence *iterOccurrence = root->FirstOrder;
+    Term *iterRoot = root;
+    Occurrence *iterOccurrence = iterRoot->FirstOrder;
+    while(iterRoot != NULL){
+        iterOccurrence = iterRoot->FirstOrder;
+        if(strcmp(iterRoot->Word, "ay") == 0){
+            printf("asd");
+        }
+        while(iterOccurrence != NULL){
+            printf("{%s, %s}, ", iterRoot->Word, iterOccurrence->term->Word);
+            iterOccurrence = iterOccurrence->nextTerm;
+        }
+        iterRoot = iterRoot->NextTerm;
+    }
+}
+
+void printOccurrence(Term *root, int occurrence){
+    if(occurrence == 1){
+        printf("1st-order term co-occurrence: ");
+    }else if(occurrence == 2){
+        printf("2nd-order term co-occurrence: ");
+    }else if(occurrence == 3){
+        printf("3rd-order term co-occurrence: ");
+    }
+    Term *iterRoot = root;
+    Occurrence *iterOccurrence;
+    while(iterRoot != NULL){
+        if(occurrence == 1){
+            iterOccurrence = iterRoot->FirstOrder;
+        }else if(occurrence == 2){
+            iterOccurrence = iterRoot->SecondOrder;
+        }else if(occurrence == 3){
+            iterOccurrence = iterRoot->ThirdOrder;
+        }
+        if(strcmp(iterRoot->Word, "ay") == 0){
+            printf("asd");
+        }
+        while(iterOccurrence != NULL){
+            printf("{%s, %s}, ", iterRoot->Word, iterOccurrence->term->Word);
+            iterOccurrence = iterOccurrence->nextTerm;
+        }
+        iterRoot = iterRoot->NextTerm;
+    }
+}
+
+void printSecondOccurrence(Term *root){
+    printf("2nd-order term co-occurrence: ");
+    Occurrence *iterOccurrence = root->SecondOrder;
     Term *iterRoot = root;
     while(iterRoot != NULL){
         while(iterOccurrence != NULL){
             printf("{%s, %s}, ", iterRoot->Word, iterOccurrence->term->Word);
             iterOccurrence = iterOccurrence->nextTerm;
         }
-        iterOccurrence = iterRoot->FirstOrder;
+        iterOccurrence = iterRoot->SecondOrder;
         iterRoot = iterRoot->NextTerm;
     }
 }
+//PRINTLER TEK METHODA INDIRGENEBİLİR.
+void printThirdOccurrence(Term *root){
+    printf("3rd-order term co-occurrence: ");
+    Occurrence *iterOccurrence = root->ThirdOrder;
+    Term *iterRoot = root;
+    while(iterRoot != NULL){
+        while(iterOccurrence != NULL){
+            printf("{%s, %s}, ", iterRoot->Word, iterOccurrence->term->Word);
+            iterOccurrence = iterOccurrence->nextTerm;
+        }
+        iterOccurrence = iterRoot->ThirdOrder;
+        iterRoot = iterRoot->NextTerm;
+    }
+}
+
 
 void secondOccurrence(Term *root){
     Term *mainIter = root;
@@ -349,8 +420,6 @@ void secondOccurrence(Term *root){
         }
         mainIter = mainIter->NextTerm;
     }
-
-
 }
 
 int doesExistInFirstOccurrence(Term *baseTerm, Term *additionalTerm){
@@ -374,6 +443,61 @@ void addSecondOccurrence(Term *baseTerm, Term *additionTerm){
         baseTerm->SecondOrder->nextTerm = NULL;
     }else{
         Occurrence *iter = baseTerm->SecondOrder;
+        while(iter->nextTerm != NULL){
+            iter = iter->nextTerm;
+        }
+        iter->nextTerm = (Occurrence*)malloc(sizeof(Occurrence));
+        iter->nextTerm->term = additionTerm;
+        iter->nextTerm->nextTerm = NULL;
+    }
+}
+
+void thirdOccurrence(Term *root){
+    Term *mainIter = root;
+    Occurrence *mainSecondOccurrenceIter = mainIter->SecondOrder;
+    Term *nextIter = mainSecondOccurrenceIter->term;
+    Occurrence *nextSecondOccurrenceIter = nextIter->SecondOrder;
+
+    while(mainIter != NULL){
+        mainSecondOccurrenceIter = mainIter->SecondOrder;
+        while(mainSecondOccurrenceIter != NULL){
+            nextIter = mainSecondOccurrenceIter->term;
+            nextSecondOccurrenceIter = nextIter->FirstOrder;
+            while(nextSecondOccurrenceIter != NULL){
+                if(doesExistInSecondOccurrence(mainIter, nextSecondOccurrenceIter->term) == 0){
+                    addThirdOccurrence(mainIter, nextSecondOccurrenceIter->term);
+                }
+                nextSecondOccurrenceIter = nextSecondOccurrenceIter->nextTerm;
+            }
+            mainSecondOccurrenceIter = mainSecondOccurrenceIter->nextTerm;
+        }
+        mainIter = mainIter->NextTerm;
+    }
+}
+
+//FirstOrder ve SecondOrder exist methodları birleştirilebilir.
+int doesExistInSecondOccurrence(Term *baseTerm, Term *additionalTerm){
+    Occurrence * iterBase = baseTerm->SecondOrder;
+    while(iterBase != NULL){
+        if(strcmp(iterBase->term->Word, additionalTerm->Word) == 0){
+            //return 1 if it does exist.
+            return 1;
+        }else{
+            iterBase = iterBase->nextTerm;
+        }
+    }
+    //return 0 if it does not exist.
+    return 0;
+}
+
+//FirstOrder ve SecondOrder add methodları birleştirilebilir.
+void addThirdOccurrence(Term *baseTerm, Term *additionTerm){
+    if(baseTerm->ThirdOrder == NULL){
+        baseTerm->ThirdOrder = (Occurrence*)malloc(sizeof(Occurrence));
+        baseTerm->ThirdOrder->term = additionTerm;
+        baseTerm->ThirdOrder->nextTerm = NULL;
+    }else{
+        Occurrence *iter = baseTerm->ThirdOrder;
         while(iter->nextTerm != NULL){
             iter = iter->nextTerm;
         }
