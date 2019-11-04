@@ -14,6 +14,12 @@ struct Document {
     struct Document *NextDocument;
 }typedef Document;
 
+struct Category{
+    char CategoryName[50];
+    int Counter;
+    struct Category *NextCategory;
+}typedef Category;
+
 struct Occurrence {
     struct Term* term;
     struct Occurrence *nextTerm;
@@ -24,6 +30,7 @@ struct Term {
     int DocumentCounter;
     Occurrence *FirstOrder, *SecondOrder, *ThirdOrder;
     Document *Document;
+    Category *Category;
     struct Term *NextTerm;
 }typedef Term;
 
@@ -47,15 +54,16 @@ void thirdOccurrence(Term *root);
 int doesExistInSecondOccurrence();
 void addThirdOccurrence(Term *baseTerm, Term *additionTerm);
 void printOccurrence(Term *root, int occurrence);
+void addCategory(Term *root, char* categoryName);
 
 int main() {
     setlocale(LC_ALL, "Turkish");
     Term *root = NULL;
 
     // Directory path of categories
-    char path[500] = "C:\\Users\\ahmet\\Desktop\\2019-2020\\DataStructures\\Project1\\DataSet\\Deneme";
+//    char path[500] = "C:\\Users\\ahmet\\Desktop\\2019-2020\\DataStructures\\Project1\\DataSet\\Deneme";
 //    char path[500] = "C:\\myfolder";
-//    char path[500] = "C:\\Users\\ahmet\\Desktop\\2019-2020\\DataStructures\\Project1\\DataSet\\smalldataset2";
+    char path[500] = "C:\\Users\\ahmet\\Desktop\\2019-2020\\DataStructures\\Project1\\DataSet\\smalldataset2";
     // Input path from user
    // printf("Enter the path of categories: ");
   //  scanf("%s", path);
@@ -67,9 +75,9 @@ int main() {
     secondOccurrence(root);
     thirdOccurrence(root);
     printOccurrence(root, 1);
-    printf("\n");
+    printf("\n\n");
     printOccurrence(root, 2);
-    printf("\n");
+    printf("\n\n");
     printOccurrence(root, 3);
 
 
@@ -184,6 +192,8 @@ void addWordIntoMasterLinkedList(Term **root, char *word, char *documentName, ch
         strcpy((*root)->Document->CategoryName, categoryName);
         (*root)->DocumentCounter = 1;
         (*root)->Document->NextDocument =NULL;
+        (*root)->Category = NULL;
+        addCategory((*root), categoryName);
         (*root)->NextTerm = NULL;
         (*root)->FirstOrder = NULL;
         (*root)->SecondOrder = NULL;
@@ -196,6 +206,8 @@ void addWordIntoMasterLinkedList(Term **root, char *word, char *documentName, ch
         strcpy(temp->Document->DocumentName, documentName);
         strcpy(temp->Document->CategoryName, categoryName);
         temp->Document->NextDocument = NULL;
+        temp->Category = NULL;
+        addCategory(temp, categoryName);
         //ilk elemandan kücük durumu
         if(strcmp(word, (*root)->Word) < 0){
             //change the root
@@ -213,6 +225,36 @@ void addWordIntoMasterLinkedList(Term **root, char *word, char *documentName, ch
     }
 }
 
+void addCategory(Term *root, char* categoryName){
+    Term *iterRoot = root;
+    Category *iterCategory = root->Category;
+    if(strcmp(root->Word, "aabb") == 0){
+        printf("asdas");
+    }
+    if(root->Category == NULL){
+        root->Category = (Category*)malloc(sizeof(Category));
+        strcpy(root->Category->CategoryName, categoryName);
+        root->Category->Counter = 1;
+        root->Category->NextCategory = NULL;
+    }else{
+        while(iterCategory != NULL){
+            if(strcmp(iterCategory->CategoryName, categoryName) == 0 ){
+                iterCategory->Counter++;
+                return;
+            }else if(iterCategory->NextCategory != NULL){
+                iterCategory = iterCategory->NextCategory;
+            }else if(iterCategory->NextCategory == NULL){
+                iterCategory->NextCategory = (Category*)malloc(sizeof(Category));
+                strcpy(iterCategory->NextCategory->CategoryName, categoryName);
+                iterCategory->NextCategory->Counter = 1;
+                iterCategory->NextCategory->NextCategory = NULL;
+                return;
+            }
+        }
+
+    }
+}
+
 int checkIfWordAlreadyExist(Term *root, char *word, char *documentName, char *categoryName){
     Term *iter = root;
     while(iter != NULL){
@@ -220,6 +262,7 @@ int checkIfWordAlreadyExist(Term *root, char *word, char *documentName, char *ca
         if(strcmp(iter->Word, word) == 0){
             //If the word already exist in the master linked list, add document into list
             addDocument(iter->Document, documentName, categoryName);
+            addCategory(iter, categoryName);
             iter->DocumentCounter = iter->DocumentCounter + 1;
             return 1;
         }
@@ -342,9 +385,6 @@ void printOccurrence(Term *root, int occurrence){
         }else if(occurrence == 3){
             iterOccurrence = iterRoot->ThirdOrder;
         }
-        if(strcmp(iterRoot->Word, "ay") == 0){
-            printf("asd");
-        }
         while(iterOccurrence != NULL){
             printf("{%s, %s}, ", iterRoot->Word, iterOccurrence->term->Word);
             iterOccurrence = iterOccurrence->nextTerm;
@@ -459,4 +499,8 @@ void addThirdOccurrence(Term *baseTerm, Term *additionTerm){
         iter->nextTerm->term = additionTerm;
         iter->nextTerm->nextTerm = NULL;
     }
+}
+
+void printMostFrequentTenWords(Term *root){
+
 }
