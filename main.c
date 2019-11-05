@@ -7,6 +7,12 @@
 #include <string.h>
 #include <stdlib.h>
 #include <locale.h>
+#include <math.h>
+#include <stdbool.h>
+
+char* healthDocumentCounter[10];
+char* econDocumentCounter[10];
+char* magazinDocumentCounter[10];
 
 struct Document {
     char DocumentName[50];
@@ -19,6 +25,8 @@ struct Category{
     int Counter;
     struct Term *Term;
     struct Category *NextCategory;
+    double IDF;
+    double FXIDF;
 }typedef Category;
 
 struct Occurrence {
@@ -37,64 +45,80 @@ struct Term {
 
 void getFilesRecursively(char *path, Term **root, Category *categoryRoot);
 void getCategoryandDocument(char *path, char *category, char *documentName);
-void printFile(char *filePath, Term **root, Category *categoryRoot);
+void getFile(char *filePath, Term **root, Category *categoryRoot);
 void addWordIntoMasterLinkedList(Term **root, char* word, char *documentName, char *categoryName, Category *categoryRoot);
 int checkIfWordAlreadyExist(Term *root, char *word, char *documentName, char *categoryName);
-void printMasterLinkedList(Term *root);
-void printDocumentList(Document *document);
 void addDocument(Document* node, char *document, char *category);
 void firstOccurrence(Term *root);
 void addFirstOccurrence(Term *baseTerm, Term *additionTerm);
-void printFirstOccurrence(Term *root);
-void printSecondOccurrence(Term *root);
-void printThirdOccurrence(Term *root);
 int doesExistInFirstOccurrence(Term *baseTerm, Term *additionalTerm);
 void secondOccurrence(Term *root);
+int doesExistInSecondOccurrence(Term *baseTerm, Term *additionalTerm);
 void addSecondOccurrence(Term *baseTerm, Term *additionTerm);
 void thirdOccurrence(Term *root);
-int doesExistInSecondOccurrence();
 void addThirdOccurrence(Term *baseTerm, Term *additionTerm);
 void printOccurrence(Term *root, int occurrence);
 void addCategory(Term *root, char* categoryName);
 void declareCategory(Category *categoryRoot, char* categoryName);
 void fillCategory(Category **econ, Category **health, Category **magazin, Term *root);
-
 void addToCategoryList(Category **categoryRoot, Term *root, int counter, char *categoryName);
+void printMostFrequentTenWords(Category *econ, Category *health, Category *magazin);
+int cleanCharArray(char* document);
+void calculateIDF(Category *root, char* document);
+void printFreqxIDF(Category *econ, Category *health, Category *magazin);
+void calculateFXIDF(Category *econ, Category *health, Category *magazin);
 
 int main() {
+
     setlocale(LC_ALL, "Turkish");
+
     Term *root = NULL;
     Category *categoryRoot = (Category*)malloc(sizeof(Category));
     strcpy(categoryRoot->CategoryName, "");
     categoryRoot->NextCategory = NULL;
 
-    Category *econ =  NULL;
-    Category *health =  NULL;
-    Category *magazin =  NULL;
+    Category *econ =  NULL,*econForIdf = NULL;
+    Category *health =  NULL, *healthForIdf = NULL;
+    Category *magazin =  NULL , *magazinForIDf = NULL;
 
     // Directory path of categories
-//    char path[500] = "C:\\Users\\ahmet\\Desktop\\2019-2020\\DataStructures\\Project1\\DataSet\\Deneme";
-//    char path[500] = "C:\\myfolder";
+    // char path[500] = "C:\\myfolder";
     char path[500] = "C:\\Users\\ahmet\\Desktop\\2019-2020\\DataStructures\\Project1\\DataSet\\smalldataset2";
     // Input path from user
-   // printf("Enter the path of categories: ");
-  //  scanf("%s", path);
+    // printf("Enter the path of categories: ");
+    // scanf("%s", path);
 
     getFilesRecursively(path, &root, categoryRoot);
     firstOccurrence(root);
-   // printMasterLinkedList(root);
     secondOccurrence(root);
     thirdOccurrence(root);
+
+    //Printing occurrences
+    printf("a) Occurrences\n");
     printOccurrence(root, 1);
     printf("\n\n");
     printOccurrence(root, 2);
     printf("\n\n");
     printOccurrence(root, 3);
 
+    //Fill Categories
     fillCategory(&econ, &health, &magazin, root);
+    printf("\n\nb) Most Frequent 10 Words in Each Category\n");
+    printMostFrequentTenWords(econ, health, magazin);
+
+    //Calculating and IDF
+    calculateIDF(econ, econDocumentCounter);
+    calculateIDF(health, healthDocumentCounter);
+    calculateIDF(magazin, magazinDocumentCounter);
+
+    //Calculating and printing Frequency times IDF.
+    printf("\n\nc) Most Frequent 10 Words in Each Category with Term Frequency*Inverse document frequency \n");
+    printFreqxIDF(econ, health, magazin);
+
     return 0;
 }
 
+//Getting files with readdir.
 void getFilesRecursively(char *basePath, Term **root, Category *categoryRoot)
 {
     char path[1000];
@@ -118,9 +142,6 @@ void getFilesRecursively(char *basePath, Term **root, Category *categoryRoot)
             strcat(path, "\\");
             strcat(path, dp->d_name);
 
-            //printf("%s\n", dp->d_name);
-            printf("%s\n", path);
-
             length = strlen(path);
             for (int i = 0; i < 4 ; i++) {
                 int dec = 4 - i;
@@ -129,7 +150,7 @@ void getFilesRecursively(char *basePath, Term **root, Category *categoryRoot)
 
             //Is that folder or txt file?
             if(strncmp(extension, ".txt", 4) == 0){
-                printFile(path, root, categoryRoot);
+                getFile(path, root, categoryRoot);
             }
 
             getFilesRecursively(path, root, categoryRoot);
@@ -138,7 +159,7 @@ void getFilesRecursively(char *basePath, Term **root, Category *categoryRoot)
     closedir(dir);
 }
 
-void printFile(char *filePath, Term **root, Category *categoryRoot){
+void getFile(char *filePath, Term **root, Category *categoryRoot){
     FILE *in_file;
     char word[50] = "";
     char category[50] = "";
@@ -156,7 +177,6 @@ void printFile(char *filePath, Term **root, Category *categoryRoot){
         {
             getCategoryandDocument(path, category, documentName);
             declareCategory(categoryRoot, category);
-            printf("Kelime: %s, Kategori: %s, Document: %s\n", word, category, documentName);
             addWordIntoMasterLinkedList(root, word, documentName, category, categoryRoot);
             memset(word, 0, sizeof(word));
             memset(documentName, 0, sizeof(documentName));
@@ -186,6 +206,13 @@ void getCategoryandDocument(char *path, char *category, char *document){
 
     strcpy(category, words[wordCounter-2]);
     strcpy(document, words[wordCounter-1]);
+    if(strcmp(category, "econ") == 0){
+        strcpy(econDocumentCounter, words[wordCounter-1]);
+    }else if(strcmp(category, "health") == 0){
+        strcpy(healthDocumentCounter, words[wordCounter-1]);
+    }else if(strcmp(category, "magazin") == 0){
+        strcpy(magazinDocumentCounter, words[wordCounter-1]);
+    }
 }
 
 void addWordIntoMasterLinkedList(Term **root, char *word, char *documentName, char *categoryName, Category *categoryRoot){
@@ -240,9 +267,6 @@ void addWordIntoMasterLinkedList(Term **root, char *word, char *documentName, ch
 void addCategory(Term *root, char* categoryName){
     Term *iterRoot = root;
     Category *iterCategory = root->Category;
-    if(strcmp(root->Word, "aabb") == 0){
-        printf("asdas");
-    }
     if(root->Category == NULL){
         root->Category = (Category*)malloc(sizeof(Category));
         strcpy(root->Category->CategoryName, categoryName);
@@ -282,14 +306,6 @@ int checkIfWordAlreadyExist(Term *root, char *word, char *documentName, char *ca
     }
     //If the word does not exist in the list, return 0.
     return 0;
-}
-
-void printMasterLinkedList(Term *root){
-    Term *iter = root;
-    while(iter->NextTerm != NULL){
-        printf("%s\n", iter->Word);
-        iter = iter->NextTerm;
-    }
 }
 
 void addDocument(Document* node, char* document, char* category){
@@ -366,16 +382,6 @@ void addFirstOccurrence(Term *baseTerm, Term *additionTerm){
         iter->nextTerm = malloc(sizeof(Occurrence));
         iter->nextTerm->term = additionTerm;
         iter->nextTerm->nextTerm = NULL;
-    }
-}
-
-void printDocumentList(Document *document){
-    Document *iter;
-    iter = document;
-    printf("%s", iter->DocumentName);
-    while(iter->NextDocument != NULL){
-        iter = iter->NextDocument;
-        printf("%s", iter->DocumentName);
     }
 }
 
@@ -540,15 +546,15 @@ void declareCategory(Category *categoryRoot, char* categoryName){
 
 void fillCategory(Category **econ, Category **health, Category **magazin, Term *root){
     Term *iter = root;
-    Category *iterCategoryOfTerm;
+    Category *iterCategoryOfTerm = NULL;
     while(iter != NULL){
         iterCategoryOfTerm = iter->Category;
         while(iterCategoryOfTerm != NULL){
-            if(strcmp(iterCategoryOfTerm->CategoryName, "econ")){
+            if(strcmp(iterCategoryOfTerm->CategoryName, "econ") == 0){
                 addToCategoryList(econ, iter, iterCategoryOfTerm->Counter, "econ");
-            }else if(strcmp(iterCategoryOfTerm->CategoryName, "health")){
+            }else if(strcmp(iterCategoryOfTerm->CategoryName, "health")  == 0){
                 addToCategoryList(health, iter, iterCategoryOfTerm->Counter, "health");
-            }else if(strcmp(iterCategoryOfTerm->CategoryName, "magazin")){
+            }else if(strcmp(iterCategoryOfTerm->CategoryName, "magazin") == 0){
                 addToCategoryList(magazin, iter, iterCategoryOfTerm->Counter, "magazin");
             }
             iterCategoryOfTerm = iterCategoryOfTerm->NextCategory;
@@ -565,15 +571,265 @@ void addToCategoryList(Category **categoryRoot, Term *term, int counter, char *c
         strcpy((*categoryRoot)->CategoryName, categoryName);
         (*categoryRoot)->NextCategory = NULL;
     }else{
+        Category *temp = (Category*)malloc(sizeof(Category));
+        strcpy(temp->CategoryName, categoryName);
+        temp->Counter = counter;
+        temp->Term = term;
+        temp->NextCategory = NULL;
+        //roottan büyükse
+        if(counter > (*categoryRoot)->Counter){
+            temp->NextCategory = (*categoryRoot);
+            (*categoryRoot) = temp;
+            return;
+        }
         Category *iterCategory = (*categoryRoot);
-        while(iterCategory->NextCategory != NULL)
-        {
+        while(iterCategory->NextCategory != NULL && counter < iterCategory->Counter){
             iterCategory = iterCategory->NextCategory;
         }
-        iterCategory->NextCategory = (Category*)malloc(sizeof(Category));
-        strcpy(iterCategory->NextCategory->CategoryName, categoryName);
-        iterCategory->NextCategory->Term = term;
-        iterCategory->NextCategory->Counter = counter;
-        iterCategory->NextCategory->NextCategory = NULL;
+        temp->NextCategory = iterCategory->NextCategory;
+        iterCategory->NextCategory = temp;
+        return;
     }
+}
+
+void printMostFrequentTenWords(Category *econ, Category *health, Category *magazin){
+    printf("\n");
+    printf("_____________________________\n");
+    printf("|            Econ            |\n");
+    printf("|----------------------------|\n");
+    Category *iterEcon = econ;
+    Category *iterHealth = health;
+    Category *iterMagazin = magazin;
+    int counter = 1;
+
+    while(iterEcon != NULL){
+        if (iterEcon != NULL) {
+            printf("| %d. %s, %d \n", counter, iterEcon->Term->Word, iterEcon->Counter);
+        }
+        iterEcon = iterEcon->NextCategory;
+        counter++;
+        if(counter == 11){
+            break;
+        }
+    }
+    printf("|----------------------------|\n");
+    printf("|____________________________|\n\n");
+
+    printf("_____________________________\n");
+    printf("|            Health          |\n");
+    printf("|----------------------------|\n");
+    counter = 1;
+    while(iterHealth != NULL){
+        if (iterHealth != NULL) {
+            printf("| %d. %s, %d \n", counter, iterHealth->Term->Word, iterHealth->Counter);
+        }
+        iterHealth = iterHealth->NextCategory;
+        counter++;
+        if(counter == 11){
+            break;
+        }
+    }
+    printf("|----------------------------|\n");
+    printf("|____________________________|\n\n");
+
+    printf("_____________________________\n");
+    printf("|            Magazin         |\n");
+    printf("|----------------------------|\n");
+    counter = 1;
+    while(iterMagazin != NULL){
+        if (iterMagazin != NULL) {
+            printf("| %d. %s, %d \n", counter, iterMagazin->Term->Word, iterMagazin->Counter);
+        }
+        iterMagazin = iterMagazin->NextCategory;
+        counter++;
+        if(counter == 11){
+            break;
+        }
+    }
+    printf("|----------------------------|\n");
+    printf("|____________________________|\n\n");
+}
+
+int cleanCharArray(char* document){
+    char cleanDocument[10];
+    strcpy(cleanDocument, "");
+    for (int i = 0; i < 10; ++i) {
+        if(document[i] == '.'){
+            break;
+        }
+        cleanDocument[i] = document[i];
+    }
+    int returnValue = atoi(cleanDocument);
+    return returnValue;
+}
+
+void calculateIDF(Category *root, char* document){
+    Category *iterRoot = root;
+    double totalNumberOfDocuments = cleanCharArray(document);
+    double numberOfDocumentsTermInIt;
+    double calculation = 0;
+    double IDF = 0;
+    while(iterRoot != NULL){
+        numberOfDocumentsTermInIt = iterRoot->Term->DocumentCounter;
+        calculation = totalNumberOfDocuments/numberOfDocumentsTermInIt;
+        IDF = log(calculation);
+        iterRoot->IDF = IDF;
+        iterRoot = iterRoot->NextCategory;
+    }
+}
+
+void calculateFXIDF(Category *econ, Category *health, Category *magazin){
+    Category *iterEcon = econ;
+    Category *iterHealth = health;
+    Category *iterMagazin = magazin;
+    int counter = 1;
+    double FreqXIDF = 0;
+    int freq = 0;
+
+    while(iterEcon != NULL){
+        if (iterEcon != NULL) {
+            if(strcmp(iterEcon->Term->Category->CategoryName, "econ") == 0){
+                freq = iterEcon->Term->Category->Counter;
+            }else if(strcmp(iterEcon->Term->Category->NextCategory->CategoryName, "econ") == 0){
+                freq = iterEcon->Term->Category->NextCategory->Counter;
+            }else{
+                freq = iterEcon->Term->Category->NextCategory->NextCategory->Counter;
+            }
+            FreqXIDF = fabs(freq * iterEcon->IDF);
+            iterEcon->FXIDF = abs(FreqXIDF);
+        }
+        iterEcon = iterEcon->NextCategory;
+        counter++;
+        if(counter == 11){
+            break;
+        }
+    }
+
+    counter = 1;
+    while(iterHealth != NULL){
+        if (iterHealth != NULL) {
+            if(strcmp(iterHealth->Term->Category->CategoryName, "health") == 0){
+                freq = iterHealth->Term->Category->Counter;
+            }else if(strcmp(iterHealth->Term->Category->NextCategory->CategoryName, "health") == 0){
+                freq = iterHealth->Term->Category->NextCategory->Counter;
+            }else{
+                freq = iterHealth->Term->Category->NextCategory->NextCategory->Counter;
+            }
+            FreqXIDF = fabs(freq * iterEcon->IDF);
+            iterHealth->FXIDF = (FreqXIDF);
+            printf("| %d. %s, %f \n", counter, iterHealth->Term->Word, FreqXIDF);
+        }
+        iterHealth = iterHealth->NextCategory;
+        counter++;
+        if(counter == 11){
+            break;
+        }
+    }
+
+    counter = 1;
+    while(iterMagazin != NULL){
+        if (iterMagazin != NULL) {
+            if(strcmp(iterMagazin->Term->Category->CategoryName, "magazin") == 0){
+                freq = iterMagazin->Term->Category->Counter;
+            }else if(strcmp(iterMagazin->Term->Category->NextCategory->CategoryName, "magazin") == 0){
+                freq = iterMagazin->Term->Category->NextCategory->Counter;
+            }else{
+                freq = iterMagazin->Term->Category->NextCategory->NextCategory->Counter;
+            }
+            FreqXIDF = fabs(freq * iterMagazin->IDF);
+            iterMagazin->FXIDF = FreqXIDF;
+        }
+        iterMagazin = iterMagazin->NextCategory;
+        counter++;
+        if(counter == 11){
+            break;
+        }
+    }
+}
+
+void printFreqxIDF(Category *econ, Category *health, Category *magazin){
+    printf("\n");
+    printf("_____________________________\n");
+    printf("|            Econ            |\n");
+    printf("|----------------------------|\n");
+    Category *iterEcon = econ;
+    Category *iterHealth = health;
+    Category *iterMagazin = magazin;
+    int counter = 1;
+    double FreqXIDF = 0;
+    int freq = 0;
+
+    while(iterEcon != NULL){
+        if (iterEcon != NULL) {
+            if(strcmp(iterEcon->Term->Category->CategoryName, "econ") == 0){
+                freq = iterEcon->Term->Category->Counter;
+            }else if(strcmp(iterEcon->Term->Category->NextCategory->CategoryName, "econ") == 0){
+                freq = iterEcon->Term->Category->NextCategory->Counter;
+            }else{
+                freq = iterEcon->Term->Category->NextCategory->NextCategory->Counter;
+            }
+            FreqXIDF = fabs(freq * iterEcon->IDF);
+            iterEcon->FXIDF = abs(FreqXIDF);
+            printf("| %d. %s, %f \n", counter, iterEcon->Term->Word, FreqXIDF);
+        }
+        iterEcon = iterEcon->NextCategory;
+        counter++;
+        if(counter == 11){
+            break;
+        }
+    }
+    printf("|----------------------------|\n");
+    printf("|____________________________|\n\n");
+
+    printf("_____________________________\n");
+    printf("|            Health          |\n");
+    printf("|----------------------------|\n");
+    counter = 1;
+    while(iterHealth != NULL){
+        if (iterHealth != NULL) {
+            if(strcmp(iterHealth->Term->Category->CategoryName, "health") == 0){
+                freq = iterHealth->Term->Category->Counter;
+            }else if(strcmp(iterHealth->Term->Category->NextCategory->CategoryName, "health") == 0){
+                freq = iterHealth->Term->Category->NextCategory->Counter;
+            }else{
+                freq = iterHealth->Term->Category->NextCategory->NextCategory->Counter;
+            }
+            FreqXIDF = fabs(freq * iterEcon->IDF);
+            iterHealth->FXIDF = (FreqXIDF);
+            printf("| %d. %s, %f \n", counter, iterHealth->Term->Word, FreqXIDF);
+        }
+        iterHealth = iterHealth->NextCategory;
+        counter++;
+        if(counter == 11){
+            break;
+        }
+    }
+    printf("|----------------------------|\n");
+    printf("|____________________________|\n\n");
+
+    printf("_____________________________\n");
+    printf("|            Magazin         |\n");
+    printf("|----------------------------|\n");
+    counter = 1;
+    while(iterMagazin != NULL){
+        if (iterMagazin != NULL) {
+            if(strcmp(iterMagazin->Term->Category->CategoryName, "magazin") == 0){
+                freq = iterMagazin->Term->Category->Counter;
+            }else if(strcmp(iterMagazin->Term->Category->NextCategory->CategoryName, "magazin") == 0){
+                freq = iterMagazin->Term->Category->NextCategory->Counter;
+            }else{
+                freq = iterMagazin->Term->Category->NextCategory->NextCategory->Counter;
+            }
+            FreqXIDF = fabs(freq * iterMagazin->IDF);
+            iterMagazin->FXIDF = FreqXIDF;
+            printf("| %d. %s, %f \n", counter, iterMagazin->Term->Word, FreqXIDF);
+        }
+        iterMagazin = iterMagazin->NextCategory;
+        counter++;
+        if(counter == 11){
+            break;
+        }
+    }
+    printf("|----------------------------|\n");
+    printf("|____________________________|\n\n");
 }
