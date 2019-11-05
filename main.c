@@ -81,12 +81,14 @@ int main() {
     Category *health =  NULL, *healthForIdf = NULL;
     Category *magazin =  NULL , *magazinForIDf = NULL;
 
+    //NOTE: PATH SHOULD NOT CONTAIN SPACE.
+    char path[500];
     // Directory path of categories
     // char path[500] = "C:\\myfolder";
-    char path[500] = "C:\\Users\\ahmet\\Desktop\\2019-2020\\DataStructures\\Project1\\DataSet\\smalldataset2";
+    //char path[500] = "C:\\Users\\ahmet\\Desktop\\2019-2020\\DataStructures\\Project1\\DataSet\\smalldataset2";
     // Input path from user
-    // printf("Enter the path of categories: ");
-    // scanf("%s", path);
+    printf("Enter the path of categories: ");
+    scanf("%s", path);
 
     getFilesRecursively(path, &root, categoryRoot);
     firstOccurrence(root);
