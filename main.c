@@ -17,6 +17,7 @@ struct Document {
 struct Category{
     char CategoryName[50];
     int Counter;
+    struct Term *Term;
     struct Category *NextCategory;
 }typedef Category;
 
@@ -34,10 +35,10 @@ struct Term {
     struct Term *NextTerm;
 }typedef Term;
 
-void getFilesRecursively(char *path, Term **root);
+void getFilesRecursively(char *path, Term **root, Category *categoryRoot);
 void getCategoryandDocument(char *path, char *category, char *documentName);
-void printFile(char *filePath, Term **root);
-void addWordIntoMasterLinkedList(Term **root, char* word, char *documentName, char *categoryName);
+void printFile(char *filePath, Term **root, Category *categoryRoot);
+void addWordIntoMasterLinkedList(Term **root, char* word, char *documentName, char *categoryName, Category *categoryRoot);
 int checkIfWordAlreadyExist(Term *root, char *word, char *documentName, char *categoryName);
 void printMasterLinkedList(Term *root);
 void printDocumentList(Document *document);
@@ -55,10 +56,21 @@ int doesExistInSecondOccurrence();
 void addThirdOccurrence(Term *baseTerm, Term *additionTerm);
 void printOccurrence(Term *root, int occurrence);
 void addCategory(Term *root, char* categoryName);
+void declareCategory(Category *categoryRoot, char* categoryName);
+void fillCategory(Category **econ, Category **health, Category **magazin, Term *root);
+
+void addToCategoryList(Category **categoryRoot, Term *root, int counter, char *categoryName);
 
 int main() {
     setlocale(LC_ALL, "Turkish");
     Term *root = NULL;
+    Category *categoryRoot = (Category*)malloc(sizeof(Category));
+    strcpy(categoryRoot->CategoryName, "");
+    categoryRoot->NextCategory = NULL;
+
+    Category *econ =  NULL;
+    Category *health =  NULL;
+    Category *magazin =  NULL;
 
     // Directory path of categories
 //    char path[500] = "C:\\Users\\ahmet\\Desktop\\2019-2020\\DataStructures\\Project1\\DataSet\\Deneme";
@@ -68,8 +80,7 @@ int main() {
    // printf("Enter the path of categories: ");
   //  scanf("%s", path);
 
-    getFilesRecursively(path, &root);
-  //  printf("*****");
+    getFilesRecursively(path, &root, categoryRoot);
     firstOccurrence(root);
    // printMasterLinkedList(root);
     secondOccurrence(root);
@@ -80,11 +91,11 @@ int main() {
     printf("\n\n");
     printOccurrence(root, 3);
 
-
+    fillCategory(&econ, &health, &magazin, root);
     return 0;
 }
 
-void getFilesRecursively(char *basePath, Term **root)
+void getFilesRecursively(char *basePath, Term **root, Category *categoryRoot)
 {
     char path[1000];
     char category[100];
@@ -118,16 +129,16 @@ void getFilesRecursively(char *basePath, Term **root)
 
             //Is that folder or txt file?
             if(strncmp(extension, ".txt", 4) == 0){
-                printFile(path, root);
+                printFile(path, root, categoryRoot);
             }
 
-            getFilesRecursively(path, root);
+            getFilesRecursively(path, root, categoryRoot);
         }
     }
     closedir(dir);
 }
 
-void printFile(char *filePath, Term **root){
+void printFile(char *filePath, Term **root, Category *categoryRoot){
     FILE *in_file;
     char word[50] = "";
     char category[50] = "";
@@ -144,8 +155,9 @@ void printFile(char *filePath, Term **root){
         while (fscanf(in_file, "%s", word) != EOF)
         {
             getCategoryandDocument(path, category, documentName);
+            declareCategory(categoryRoot, category);
             printf("Kelime: %s, Kategori: %s, Document: %s\n", word, category, documentName);
-            addWordIntoMasterLinkedList(root, word, documentName, category);
+            addWordIntoMasterLinkedList(root, word, documentName, category, categoryRoot);
             memset(word, 0, sizeof(word));
             memset(documentName, 0, sizeof(documentName));
         }
@@ -176,7 +188,7 @@ void getCategoryandDocument(char *path, char *category, char *document){
     strcpy(document, words[wordCounter-1]);
 }
 
-void addWordIntoMasterLinkedList(Term **root, char *word, char *documentName, char *categoryName){
+void addWordIntoMasterLinkedList(Term **root, char *word, char *documentName, char *categoryName, Category *categoryRoot){
     Term *temp = (Term*)malloc(sizeof(Term));
     strcpy(temp->Word, word);
     temp->Document = NULL;
@@ -501,6 +513,67 @@ void addThirdOccurrence(Term *baseTerm, Term *additionTerm){
     }
 }
 
-void printMostFrequentTenWords(Term *root){
+void declareCategory(Category *categoryRoot, char* categoryName){
+    if(strcmp(categoryRoot->CategoryName, "") == 0){
+        strcpy(categoryRoot->CategoryName, categoryName);
+        categoryRoot->NextCategory = NULL;
+        categoryRoot->Counter = 0;
+        categoryRoot->Term = NULL;
+    }
+    Category *iter = categoryRoot;
+    while(iter != NULL){
+        if(strcmp(iter->CategoryName, categoryName) == 0){
+            return;
+        }
+        iter = iter->NextCategory;
+    }
+    iter = categoryRoot;
+    while(iter->NextCategory != NULL){
+        iter = iter->NextCategory;
+    }
+    iter->NextCategory = (Category*)malloc(sizeof(Category));
+    strcpy(iter->NextCategory->CategoryName, categoryName);
+    iter->NextCategory->Counter = 0;
+    iter->NextCategory->Term = NULL;
+    iter->NextCategory->NextCategory = NULL;
+}
 
+void fillCategory(Category **econ, Category **health, Category **magazin, Term *root){
+    Term *iter = root;
+    Category *iterCategoryOfTerm;
+    while(iter != NULL){
+        iterCategoryOfTerm = iter->Category;
+        while(iterCategoryOfTerm != NULL){
+            if(strcmp(iterCategoryOfTerm->CategoryName, "econ")){
+                addToCategoryList(econ, iter, iterCategoryOfTerm->Counter, "econ");
+            }else if(strcmp(iterCategoryOfTerm->CategoryName, "health")){
+                addToCategoryList(health, iter, iterCategoryOfTerm->Counter, "health");
+            }else if(strcmp(iterCategoryOfTerm->CategoryName, "magazin")){
+                addToCategoryList(magazin, iter, iterCategoryOfTerm->Counter, "magazin");
+            }
+            iterCategoryOfTerm = iterCategoryOfTerm->NextCategory;
+        }
+        iter = iter->NextTerm;
+    }
+}
+
+void addToCategoryList(Category **categoryRoot, Term *term, int counter, char *categoryName) {
+    if((*categoryRoot) == NULL){
+        (*categoryRoot) = (Category*)malloc(sizeof(Category));
+        (*categoryRoot)->Counter = counter;
+        (*categoryRoot)->Term = term;
+        strcpy((*categoryRoot)->CategoryName, categoryName);
+        (*categoryRoot)->NextCategory = NULL;
+    }else{
+        Category *iterCategory = (*categoryRoot);
+        while(iterCategory->NextCategory != NULL)
+        {
+            iterCategory = iterCategory->NextCategory;
+        }
+        iterCategory->NextCategory = (Category*)malloc(sizeof(Category));
+        strcpy(iterCategory->NextCategory->CategoryName, categoryName);
+        iterCategory->NextCategory->Term = term;
+        iterCategory->NextCategory->Counter = counter;
+        iterCategory->NextCategory->NextCategory = NULL;
+    }
 }
